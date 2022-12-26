@@ -1,9 +1,9 @@
 using Plots
 function main()
-    function distance(x1, y1, x2, y2)
-        return ((x2-x1)^2 + (y2-y1)^2)^0.5;
-    end;
 
+    function distance(x1, y1, x2, y2)
+        return sqrt((x2-x1)^2 + (y2-y1)^2);
+    end;
 
     # define grid and time constants
     Nx = 400;   # x dimension 
@@ -19,20 +19,10 @@ function main()
 
     # define initial conditions
     F = ones(Ny, Nx, NL) + 0.01 * randn((Ny, Nx, NL)); 
-    F[:,:,3] .= 2.3; # set a right velocity by assigning additional velocities to the third node 
+    F[:,:,4] .= 2.3; # set a right velocity by assigning additional velocities to the third node 
 
     # obstacle
-    grids = Array{Int64}(undef, Ny, Nx);
-    for y = 1:Ny
-        for x = 1:Nx
-            if distance(Nx//4, Ny//2, x, y) < 13
-                grids[y,x] = 1;
-            end;
-        end;
-    end;
-
     cylinder = fill(false, (Ny, Nx));
-
 
     for y=1:Ny
         for x=1:Nx
@@ -47,45 +37,40 @@ function main()
     for it = 1:Nt
 
         # streaming
-        for i = 1:NL
-            for (cx, cy) in zip(cxs, cys)
-                F[:,:,i] .= circshift(F[:,:,i], cx);
-                F[:,:,i] .= circshift(F[:,:,i], cy);
-            end;
+        for (i, cy, cx) in zip(1:NL, cys, cxs)
+            F[:,:,i] .= circshift(F[:,:,i], (cx, 2));
+            F[:,:,i] .= circshift(F[:,:,i], (cy, 1));
         end;
+
 
         # boundary
         bndryF = F[cylinder, :];
         bndryF = bndryF[:, [1, 6, 7, 8, 9, 2, 3, 4, 5]];
+        
 
         # fluid variables
-        ρ = sum(F, dims=3);
-        temp_F_x = zeros(Ny, Nx, NL);
-        temp_F_y = zeros(Ny, Nx, NL);
-
-        for y = 1:Ny # I cannot find convenient way to do 3_d product 
-            for x = 1:Nx
-                temp_F_x[y,x,:] = F[y,x,:] .* cxs;
-                temp_F_y[y,x,:] = F[y,x,:] .* cys;
-            end;
-        end;
-        ux = sum(temp_F_x, dims=3) ./ ρ;
-        uy = sum(temp_F_y, dims=3) ./ ρ;
+        ρ = sum(F, dims=3)[:,:,1];
+        tempx = zeros(Ny, Nx);
+        tempy = zeros(Ny, Nx);
+        for i=1:NL
+            tempx += (F[:,:,i] * cxs[i]);
+            tempy += (F[:,:,i] * cys[i]);
+        end
+        ux = tempx ./ ρ;
+        uy = tempy ./ ρ;
+    
 
         F[cylinder, :] = bndryF;
-        ux[cylinder,:] .= 0;
-        uy[cylinder,:] .= 0;
+        ux[cylinder] .= 0;
+        uy[cylinder] .= 0;
 
 
         # collision
-        F_eq = zeros(size(F)); # equilibrium
-        for i = 1:NL
-            for (cx, cy, w) in zip(cxs, cys, weights)
-                F_eq = ρ .* w .* (1 .+ 3 .* (cx.*ux .+ cy.*uy) .+ 9 * (cx.*ux .+ cy.*uy).^2 ./ 2 .- 3 .* (ux.^2 .+ uy.^2)./2);
-            end;
-        end;
-        F = F .+ (-1/τ) .* (F .- F_eq);
-        display(heatmap((ux.^2 .+ uy.^2)[:,:,1], c=:diverging_bkr_55_10_c35_n256, aspect_ratio=1));
+        #F_eq = zeros(size(F)); # equilibrium
+        #for (i, cx, cy, w) in zip(1:NL, cxs, cys, weights)
+        #    F_eq = ρ .* w .* (1 .+ (3 .* (cx.*ux .+ cy.*uy)) .+ ((9/2) .* (cx.*ux .+ cy.*uy).^2) .- ((3/2) .* (ux.^2 .+ uy.^2)));
+        #end;
+        #F += (-1/τ) .* (F .- F_eq);
+        display(heatmap((uy.^2 + ux.^2).^0.5, aspect_ratio=1));
     end;
 end;
-
