@@ -66,11 +66,11 @@ function main()
 
 
         # collision
-        #F_eq = zeros(size(F)); # equilibrium
-        #for (i, cx, cy, w) in zip(1:NL, cxs, cys, weights)
-        #    F_eq = ρ .* w .* (1 .+ (3 .* (cx.*ux .+ cy.*uy)) .+ ((9/2) .* (cx.*ux .+ cy.*uy).^2) .- ((3/2) .* (ux.^2 .+ uy.^2)));
-        #end;
-        #F += (-1/τ) .* (F .- F_eq);
+        F_eq = zeros(size(F)); # equilibrium
+        for (i, cx, cy, w) in zip(1:NL, cxs, cys, weights)
+            F_eq[:,:,i] = ρ .* w .* (1 .+ (3 .* (cx.*ux .+ cy.*uy)) .+ ((9/2) .* (cx.*ux .+ cy.*uy).^2) .- ((3/2) .* (ux.^2 .+ uy.^2)));
+        end;
+        F += (-1/τ) .* (F .- F_eq);
         display(heatmap((uy.^2 + ux.^2).^0.5, aspect_ratio=1));
     end;
 end;
