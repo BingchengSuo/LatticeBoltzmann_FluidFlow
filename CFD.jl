@@ -8,7 +8,7 @@ function main()
     # define grid and time constants
     Nx = 400;   # x dimension 
     Ny = 100;   # y dimension 
-    Nt = 50;  # iteration time 
+    Nt = 3000;  # iteration time 
     τ  = 0.53;  # collision time scale / kinematic viscosity
 
     # defind lattice constants 
@@ -37,9 +37,9 @@ function main()
     for it = 1:Nt
 
         # streaming
-        for (i, cy, cx) in zip(1:NL, cys, cxs)
-            F[:,:,i] .= circshift(F[:,:,i], (cx, 2));
-            F[:,:,i] .= circshift(F[:,:,i], (cy, 1));
+        for (i, cx, cy) in zip(1:NL, cxs, cys)
+            F[:,:,i] = circshift(F[:,:,i], (0, cx));
+            F[:,:,i] = circshift(F[:,:,i], (cy, 0));
         end;
 
 
@@ -59,11 +59,9 @@ function main()
         ux = tempx ./ ρ;
         uy = tempy ./ ρ;
     
-
         F[cylinder, :] = bndryF;
         ux[cylinder] .= 0;
         uy[cylinder] .= 0;
-
 
         # collision
         F_eq = zeros(size(F)); # equilibrium
@@ -71,6 +69,8 @@ function main()
             F_eq[:,:,i] = ρ .* w .* (1 .+ (3 .* (cx.*ux .+ cy.*uy)) .+ ((9/2) .* (cx.*ux .+ cy.*uy).^2) .- ((3/2) .* (ux.^2 .+ uy.^2)));
         end;
         F += (-1/τ) .* (F .- F_eq);
-        display(heatmap((uy.^2 + ux.^2).^0.5, aspect_ratio=1));
+        if it%100 == 0
+            display(heatmap((uy.^2 + ux.^2).^0.5, aspect_ratio=1));
+        end;
     end;
 end;
